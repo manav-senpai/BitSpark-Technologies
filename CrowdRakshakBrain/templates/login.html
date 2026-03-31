@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crowd Rakshak — Secure Login</title>
+<style>
+  /* Offline-safe font stack */
+  @import url('data:text/css,');
+</style>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0d1b2a;
+    --navy-mid: #1b2e45;
+    --blue: #1a56a0;
+    --blue-light: #2d72d2;
+    --gold: #c8a84b;
+    --gold-light: #e2c97e;
+    --cream: #f5f2eb;
+    --text: #1a1a2e;
+    --muted: #5a6072;
+    --error: #c0392b;
+    --border: #d0cfc7;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle geometric background */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 59px, rgba(255,255,255,0.02) 60px),
+      repeating-linear-gradient(90deg, transparent, transparent 59px, rgba(255,255,255,0.02) 60px);
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: absolute;
+    top: -200px; left: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(26,86,160,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .login-wrap {
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Top emblem bar */
+  .emblem-bar {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .emblem {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    position: relative;
+  }
+
+  .emblem svg { width: 100%; height: 100%; }
+
+  .org-name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--gold-light);
+    letter-spacing: 0.04em;
+    display: block;
+  }
+
+  .org-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* Card */
+  .card {
+    background: var(--cream);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 1px 0 rgba(200,168,75,0.3);
+  }
+
+  .card-header {
+    background: var(--navy-mid);
+    padding: 18px 28px;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-header .lock-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+  }
+
+  .card-header span {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .card-body {
+    padding: 32px 28px 28px;
+  }
+
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    height: 44px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 0 14px;
+    font-size: 15px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  input:focus {
+    border-color: var(--blue-light);
+    box-shadow: 0 0 0 3px rgba(45,114,210,0.12);
+  }
+
+  .role-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+
+  .role-tab {
+    flex: 1;
+    height: 38px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .role-tab.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: var(--gold-light);
+  }
+
+  .role-tab svg { width: 14px; height: 14px; }
+
+  .btn-login {
+    width: 100%;
+    height: 46px;
+    background: var(--navy);
+    color: var(--gold-light);
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 0.2s, transform 0.1s;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .btn-login:hover { background: var(--blue); }
+  .btn-login:active { transform: scale(0.99); }
+
+  .error-msg {
+    background: #fdecea;
+    border: 1px solid #f5c6c2;
+    border-radius: 4px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--error);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 22px 0;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .card-footer {
+    background: #eeece5;
+    padding: 12px 28px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-footer span {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #27ae60;
+    display: inline-block;
+    margin-right: 5px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+
+  <div class="emblem-bar">
+    <div class="emblem">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 4L8 14V32C8 46.5 18.5 57.5 32 61C45.5 57.5 56 46.5 56 32V14L32 4Z" fill="#1a56a0" stroke="#c8a84b" stroke-width="1.5"/>
+        <path d="M32 12L14 20V32C14 43 22 51.5 32 54.5C42 51.5 50 43 50 32V20L32 12Z" fill="#0d1b2a" opacity="0.6"/>
+        <circle cx="32" cy="28" r="8" stroke="#c8a84b" stroke-width="1.5" fill="none"/>
+        <path d="M22 44C22 38.477 26.477 34 32 34C37.523 34 42 38.477 42 44" stroke="#c8a84b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <circle cx="32" cy="28" r="3" fill="#c8a84b"/>
+      </svg>
+    </div>
+    <span class="org-name">Crowd Rakshak</span>
+    <span class="org-sub">Emergency Response System &nbsp;•&nbsp; Authorized Access Only</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <svg class="lock-icon" viewBox="0 0 16 16" fill="none">
+        <rect x="3" y="7" width="10" height="8" rx="1.5" stroke="#c8a84b" stroke-width="1.2"/>
+        <path d="M5 7V5a3 3 0 016 0v2" stroke="#c8a84b" stroke-width="1.2"/>
+      </svg>
+      <span>Secure Authentication Portal</span>
+    </div>
+
+    <div class="card-body">
+
+      {% if error %}
+      <div class="error-msg">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="6" stroke="#c0392b" stroke-width="1.2"/>
+          <path d="M7 4v4M7 9.5v.5" stroke="#c0392b" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <div style="margin-bottom:20px;">
+        <label>Login As</label>
+        <div class="role-tabs">
+          <button class="role-tab active" id="tab-police" onclick="selectRole('police')">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3">
+              <path d="M7 1L2 3v4c0 3.3 2.2 5.6 5 6.3C9.8 12.6 12 10.3 12 7V3L7 1z"/>
+            </svg>
+            Police
+          </button>
+          <button class="role-tab" id="tab-volunteer" onclick="selectRole('volunteer')">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3">
+              <circle cx="7" cy="4.5" r="2.5"/>
+              <path d="M2 12c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
+            </svg>
+            Volunteer
+          </button>
+        </div>
+      </div>
+
+      <form method="POST" action="/login">
+        <input type="hidden" name="role" id="role-input" value="police">
+
+        <div class="field-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Enter username" autocomplete="off" required>
+        </div>
+
+        <div class="field-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn-login">Authenticate &amp; Enter</button>
+      </form>
+
+      <div class="divider"></div>
+      <p class="hint">Demo credentials — Police: <strong>police / police123</strong><br>Volunteer: <strong>volunteer / volunteer123</strong></p>
+    </div>
+
+    <div class="card-footer">
+      <span><span class="status-dot"></span>System Online</span>
+      <span>Crowd Rakshak v2.0</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function selectRole(role) {
+  document.getElementById('role-input').value = role;
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + role).classList.add('active');
+}
+</script>
+</body>
+</html>

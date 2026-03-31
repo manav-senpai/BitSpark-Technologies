@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crowd Rakshak — Volunteer View</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0d1b2a;
+    --navy-mid: #142236;
+    --blue: #1a56a0;
+    --gold: #c8a84b;
+    --gold-light: #e2c97e;
+    --bg: #f0eee7;
+    --card: #ffffff;
+    --text: #0d1b2a;
+    --muted: #5a6072;
+    --border: #dddbd3;
+    --safe: #1a7a4a;
+    --safe-bg: #eaf5ef;
+    --warn: #b07d10;
+    --warn-bg: #fef8e8;
+    --danger: #b92c2c;
+    --danger-bg: #fdecea;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .topnav {
+    background: var(--navy);
+    border-bottom: 2px solid var(--gold);
+    height: 54px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .nav-logo { display: flex; align-items: center; gap: 10px; }
+  .nav-logo svg { width: 28px; height: 28px; }
+  .nav-title { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; color: var(--gold-light); }
+
+  .nav-badge {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+    color: #7db87d; background: rgba(125,184,125,0.1); border: 1px solid rgba(125,184,125,0.3);
+    border-radius: 3px; padding: 2px 8px;
+  }
+
+  .nav-spacer { flex: 1; }
+  .nav-user { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .btn-logout {
+    background: none; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5);
+    border-radius: 3px; padding: 5px 12px; font-size: 11px; cursor: pointer;
+    text-decoration: none; letter-spacing: 0.05em; transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: rgba(255,255,255,0.35); color: #fff; }
+
+  #alert-banner {
+    display: none; align-items: center; gap: 12px; padding: 12px 24px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.05em;
+    animation: flashBg 1s infinite;
+  }
+  #alert-banner.danger  { display: flex; background: var(--danger); color: #fff; }
+  #alert-banner.warning { display: flex; background: #e67e22; color: #fff; }
+  @keyframes flashBg { 0%,100% { opacity: 1; } 50% { opacity: 0.88; } }
+
+  .layout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card { background: var(--card); border-radius: 6px; border: 1px solid var(--border); overflow: hidden; }
+  .card-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-head-left { display: flex; align-items: center; gap: 8px; }
+  .card-head-accent { width: 3px; height: 16px; background: var(--gold); border-radius: 2px; }
+  .card-head h2 { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .card-body { padding: 18px; }
+
+  /* BIG STATUS CARD */
+  .status-hero {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .status-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 28px;
+  }
+
+  .status-icon.SAFE    { background: var(--safe-bg);   border: 2px solid #b3dcc4; }
+  .status-icon.WARNING { background: var(--warn-bg);   border: 2px solid #f0d090; }
+  .status-icon.DANGER  { background: var(--danger-bg); border: 2px solid #f5b8b5; animation: iconPulse 1s infinite; }
+  .status-icon.STARTUP { background: #f0f0f0; border: 2px solid #ddd; }
+
+  @keyframes iconPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+
+  .status-info .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+  }
+
+  .status-info .status-text {
+    font-size: 32px; font-weight: 600; line-height: 1;
+  }
+
+  .status-text.SAFE    { color: var(--safe); }
+  .status-text.WARNING { color: var(--warn); }
+  .status-text.DANGER  { color: var(--danger); }
+  .status-text.STARTUP { color: var(--muted); }
+
+  .status-info .sub {
+    font-size: 14px; color: var(--muted); margin-top: 6px;
+  }
+
+  .status-divider { width: 1px; height: 60px; background: var(--border); }
+
+  .count-block .count-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  }
+
+  .count-block .count-value {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 42px; font-weight: 500; color: var(--navy); line-height: 1;
+  }
+
+  /* INSTRUCTIONS BOX */
+  .instructions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .instr-card {
+    border-radius: 5px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .instr-icon { font-size: 20px; margin-bottom: 8px; }
+
+  .instr-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+
+  .instr-body { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* VIDEO */
+  .video-wrap { position: relative; background: #000; border-radius: 4px; overflow: hidden; aspect-ratio: 4/3; }
+  .video-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .vid-tag {
+    background: rgba(13,27,42,0.82); border: 1px solid rgba(200,168,75,0.4); color: var(--gold-light);
+    font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 3px;
+  }
+  .vid-tag.live { display: flex; align-items: center; gap: 5px; }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #e74c3c; animation: pulse-dot 1.2s infinite; }
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #27ae60; animation: pulse-dot 2s infinite; display: inline-block; }
+
+  .video-overlay { position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+
+  /* GRAPH */
+  .chart-wrap { position: relative; height: 180px; }
+
+  /* ALERT LOG */
+  .alert-log { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; }
+  .alert-log::-webkit-scrollbar { width: 4px; }
+  .alert-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .log-item { display: grid; grid-template-columns: 60px 1fr auto; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .log-item:last-child { border-bottom: none; }
+  .log-time { font-family: 'Courier New', Courier, monospace; font-size: 11px; color: var(--muted); }
+  .log-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; }
+  .log-badge.SAFE    { background: var(--safe-bg);   color: var(--safe); }
+  .log-badge.WARNING { background: var(--warn-bg);   color: var(--warn); }
+  .log-badge.DANGER  { background: var(--danger-bg); color: var(--danger); }
+  .log-badge.MANUAL  { background: #eef; color: #336; }
+  .log-badge.STARTUP { background: #f0f0f0; color: #888; }
+  .empty-log { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+
+  /* READ ONLY NOTICE */
+  .readonly-notice {
+    display: flex; align-items: center; gap: 8px;
+    background: #f5f2e8; border: 1px solid #e0dccc; border-radius: 4px;
+    padding: 10px 14px; font-size: 12px; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="nav-logo">
+    <svg viewBox="0 0 28 28" fill="none">
+      <path d="M14 2L3 7V14C3 20.6 8 26 14 27.5C20 26 25 20.6 25 14V7L14 2Z" fill="#1a56a0" stroke="#c8a84b" stroke-width="1"/>
+      <circle cx="14" cy="13" r="4" stroke="#c8a84b" stroke-width="1" fill="none"/>
+      <circle cx="14" cy="13" r="1.5" fill="#c8a84b"/>
+      <path d="M9 21c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="#c8a84b" stroke-width="1" stroke-linecap="round" fill="none"/>
+    </svg>
+    <span class="nav-title">Crowd Rakshak</span>
+  </div>
+  <span class="nav-badge">Volunteer View</span>
+  <div class="nav-spacer"></div>
+  <span class="status-dot" style="margin-right:6px;"></span>
+  <span style="font-size:12px;color:rgba(255,255,255,0.5);margin-right:12px;">Online</span>
+  <span class="nav-user" style="margin-right:14px;">{{ username }}</span>
+  <a href="/logout" class="btn-logout">Sign Out</a>
+</nav>
+
+<div id="alert-banner">
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M8 1L1 14h14L8 1z" stroke="white" stroke-width="1.3" fill="none"/>
+    <path d="M8 6v4M8 11.5v.5" stroke="white" stroke-width="1.3" stroke-linecap="round"/>
+  </svg>
+  <span id="alert-banner-text">ALERT</span>
+</div>
+
+<div class="layout">
+
+  <!-- READONLY NOTICE -->
+  <div class="readonly-notice">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="6" stroke="#9a8c6a" stroke-width="1.2"/>
+      <path d="M7 4v4M7 9.5v.5" stroke="#9a8c6a" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    You are viewing as <strong style="color:var(--text);margin:0 4px;">Volunteer</strong> — read-only access. Contact police command for hardware control.
+  </div>
+
+  <!-- STATUS HERO -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-head-accent"></div>
+        <h2>Current Status</h2>
+      </div>
+    </div>
+    <div class="status-hero">
+      <div class="status-icon STARTUP" id="status-icon">—</div>
+      <div class="status-info">
+        <div class="label">Crowd Status</div>
+        <div class="status-text STARTUP" id="status-text">Connecting...</div>
+        <div class="sub" id="status-sub">Waiting for data</div>
+      </div>
+      <div class="status-divider"></div>
+      <div class="count-block">
+        <div class="count-label">Faces Detected</div>
+        <div class="count-value" id="count-value">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE FEED -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-head-accent"></div>
+        <h2>Live Camera Feed</h2>
+      </div>
+      <span class="vid-tag live"><span class="live-dot"></span>Live</span>
+    </div>
+    <div class="card-body" style="padding:12px;">
+      <div class="video-wrap">
+        <img src="/ai_video" alt="Connecting..." />
+        <div class="video-overlay">
+          <span class="vid-tag">Camera 01 — Main Gate</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRAPH -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-head-accent"></div>
+        <h2>Crowd Trend — Last 30 Minutes</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap">
+        <canvas id="crowdChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESPONSE GUIDE -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-head-accent"></div>
+        <h2>Volunteer Response Guide</h2>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="instructions">
+        <div class="instr-card">
+          <div class="instr-icon">🟢</div>
+          <div class="instr-title">Safe</div>
+          <div class="instr-body">Normal operations. Maintain crowd flow. Gate is open.</div>
+        </div>
+        <div class="instr-card">
+          <div class="instr-icon">🟡</div>
+          <div class="instr-title">Warning</div>
+          <div class="instr-body">Crowd elevated. Begin redirecting flow to alternate exits. Alert nearby volunteers.</div>
+        </div>
+        <div class="instr-card">
+          <div class="instr-icon">🔴</div>
+          <div class="instr-title">Danger</div>
+          <div class="instr-body">Emergency active. Siren ON. Do not block exits. Contact police immediately.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALERT LOG -->
+  <div class="card">
+    <div class="card-head">
+      <div class="card-head-left">
+        <div class="card-head-accent"></div>
+        <h2>Recent Events</h2>
+      </div>
+      <span style="font-size:11px;color:var(--muted);" id="log-count">0 events</span>
+    </div>
+    <div class="card-body" style="padding:14px 18px;">
+      <div class="alert-log" id="alert-log">
+        <div class="empty-log">No events recorded yet.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const ctx = document.getElementById('crowdChart').getContext('2d');
+const crowdChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      label: 'Crowd Count',
+      data: [],
+      borderColor: '#1a56a0',
+      backgroundColor: 'rgba(26,86,160,0.08)',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { maxTicksLimit: 6, font: { size: 10, family: 'Courier New' }, color: '#9a9a9a' }, grid: { color: 'rgba(0,0,0,0.05)' } },
+      y: { beginAtZero: true, ticks: { font: { size: 10, family: 'Courier New' }, color: '#9a9a9a' }, grid: { color: 'rgba(0,0,0,0.05)' } }
+    }
+  }
+});
+
+const statusMeta = {
+  SAFE:    { icon: '✓', text: 'Safe',         sub: 'Crowd is within safe limits.',     cls: 'SAFE' },
+  WARNING: { icon: '⚠', text: 'Warning',      sub: 'Crowd is elevated. Stay alert.',   cls: 'WARNING' },
+  DANGER:  { icon: '!', text: 'Danger',        sub: 'Emergency active. Follow protocol.', cls: 'DANGER' },
+  STARTUP: { icon: '—', text: 'Connecting...', sub: 'Waiting for data.',               cls: 'STARTUP' }
+};
+
+async function refreshStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+
+    const meta = statusMeta[d.status] || statusMeta['STARTUP'];
+    const icon = document.getElementById('status-icon');
+    const text = document.getElementById('status-text');
+    const sub  = document.getElementById('status-sub');
+
+    icon.textContent = meta.icon;
+    icon.className = 'status-icon ' + meta.cls;
+    text.textContent = meta.text;
+    text.className = 'status-text ' + meta.cls;
+    sub.textContent = meta.sub;
+    document.getElementById('count-value').textContent = d.count;
+
+    const banner = document.getElementById('alert-banner');
+    banner.className = '';
+    if (d.status === 'DANGER') {
+      banner.className = 'danger';
+      document.getElementById('alert-banner-text').textContent = `⚠ DANGER — ${d.count} faces detected. Follow emergency protocol.`;
+    } else if (d.status === 'WARNING') {
+      banner.className = 'warning';
+      document.getElementById('alert-banner-text').textContent = `⚠ WARNING — ${d.count} faces detected. Be ready.`;
+    }
+  } catch(e) {}
+}
+
+async function refreshGraph() {
+  try {
+    const r = await fetch('/api/graph');
+    const data = await r.json();
+    if (!data.length) return;
+    crowdChart.data.labels = data.map(d => d.time);
+    crowdChart.data.datasets[0].data = data.map(d => d.count);
+    crowdChart.update('none');
+  } catch(e) {}
+}
+
+async function refreshAlerts() {
+  try {
+    const r = await fetch('/api/alerts');
+    const alerts = await r.json();
+    document.getElementById('log-count').textContent = alerts.length + ' events';
+    const logEl = document.getElementById('alert-log');
+    if (!alerts.length) { logEl.innerHTML = '<div class="empty-log">No events recorded yet.</div>'; return; }
+    logEl.innerHTML = alerts.map(a => `
+      <div class="log-item">
+        <span class="log-time">${a.time}</span>
+        <span style="font-size:12px;color:var(--text);">${a.action} — ${a.count} faces</span>
+        <span class="log-badge ${a.status}">${a.status}</span>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+setInterval(refreshStatus, 1500);
+setInterval(refreshGraph, 5000);
+setInterval(refreshAlerts, 3000);
+refreshStatus(); refreshGraph(); refreshAlerts();
+</script>
+</body>
+</html>
