@@ -7,13 +7,41 @@ import mediapipe as mp
 import time
 from collections import deque
 from datetime import datetime
+import socket
+import concurrent.futures
 
 app = Flask(__name__)
 CORS(app)
 app.secret_key = "crowd_rakshak_secret_2024"
 
 # --- TARGET ---
-PI_IP = "raspberry.local"
+# --- T' AUTO-HUNTER ---
+def hunt_for_pi():
+    print("Unleashin' t' hounds to hunt down t' Pi's IP address...")
+    base_ip = "192.168.137." # T' standard Windows Hotspot land
+    
+    def check_port(ip):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5) # Fast strike, don't wait around
+        result = sock.connect_ex((ip, 5000))
+        sock.close()
+        if result == 0:
+            return ip
+        return None
+
+    # Send 100 scouts out to sweep t' battlefield in half a second
+    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+        ips = [f"{base_ip}{i}" for i in range(2, 255)]
+        for result in executor.map(check_port, ips):
+            if result:
+                print(f"TARGET LOCKED: T' Pi is waitin' at {result}")
+                return result
+                
+    print("T' hounds found naught. Is t' Pi powered and connected to t' hotspot?")
+    return "127.0.0.1" # Fallback so t' code doesn't crash completely
+
+# --- T' TARGET ---
+PI_IP = hunt_for_pi()
 STREAM_URL = f"http://{PI_IP}:5000/video"
 
 # --- CREDENTIALS ---
@@ -120,7 +148,7 @@ def generate_ai_frames():
                 raw_status_memory = current_raw
                 status_change_timer = time.time()
 
-            if time.time() - status_change_timer >= 5.0:
+            if time.time() - status_change_timer >= 3.0:
                 if confirmed_status != raw_status_memory:
                     confirmed_status = raw_status_memory
                     action_taken = ""
